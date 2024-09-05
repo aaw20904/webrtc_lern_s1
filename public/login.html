@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="index.css">
+    <style>
+
+        body{
+       background-color: aquamarine;
+       color:darkgreen !important;
+        }
+        input{
+            background-color: #ddffdd !important;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Please enter your name and password:</h2>
+            <form class="d-flex flex-column p-2" action="/login" enctype="application/x-www-form-urlencoded" method="post">
+                    <label class="form-label m-2" for="001">password</label>
+                    <input class="form-control m-2" type="password" name="password" id="001">
+                    <label class="form-label m-2" for="001">name</label>
+                    <input class="form-control m-2" type="text" name="name" id="001">
+
+                    <div class="m-2"><button type="submit" class="btn btn-dark">LogIn</button></div>
+            </form>
+
+    </div>
+   
+</body>
+</html>
