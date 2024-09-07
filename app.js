@@ -12,7 +12,8 @@ let users ={}
 let db = {}
 db.NameId= new Map();
 db.IdPassword = new Map();
-db.IdTokenConnection = new Map();
+db.IdToken = new Map();
+db.IdConnection = new Map();
 ////user 1
 db.NameId.set("user1", 1000);
 db.IdPassword.set(1000,'secret1');
@@ -139,7 +140,7 @@ app.post("/login",(req,res)=>{
        let token = crypto.randomBytes(5)
        
        //save token in db
-       db.IdTokenConnection.set(usrId, {token:Number(token)});
+       db.IdToken.set(usrId,  Number(token));
        //assign new token to cookie
        //---token format:
        //[token(8),userId(4)]
@@ -153,10 +154,34 @@ app.post("/login",(req,res)=>{
   //res.json(req.body)
 })
 
+
+const validateAndUpdateToken = (dBase, auth) =>{
+  //extarct authorization data
+  let usrId =  parseInt(auth.slice(10), 16);
+  let token = parseInt(auth.slice(0,9), 16);
+   //get token by usrId
+   let savedToken = dBase.IdToken.get(usrId);
+   if (!savedToken) {
+     //when token is not in DB
+     return false
+   }
+      //compare access token
+   if (token === savedToken) {
+      //generate new token
+      let newToken =   crypto.randomBytes(5)
+       ///2)save in DB
+       db.IdToken.set(usrId, Number(newToken));
+       //3)return the new token for client as  string
+       return {auth: `${newToken.toString("hex")}${usrId.toString(16)}`, usrId:usrId}
+   } else{
+    return false
+   }
+
+}
 //checking token(from cookie), re-generate it,
 //sends to a client message with a new access token
 //--this function may be used for incoming WS messages authentication--
-const checkUserByWebSocks=(wsock, req, db)=>{
+const newConnectionTokenCheck=( req, dbase)=>{
     //read cookies
     let parser = cookieParser()
     parser(req,false,()=>true);
@@ -167,52 +192,72 @@ const checkUserByWebSocks=(wsock, req, db)=>{
       //when cookie is not
       return false
     }
-    let usrId =  parseInt(authData.slice(10),16);
+    let usrId = parseInt(authData.slice(10),16);
     let token = parseInt(authData.slice(0,9),16);
     if(!usrId || !token){
       //when cookie hasan`t fields 
       return false
     }
     //get token by usrId
-    let savedObject = db.IdTokenConnection.get(usrId);
-    if (!savedObject) {
+    let savedToken = dbase.IdToken.get(usrId);
+    if (!savedToken) {
       //when token is not in DB
       return false
     }
-    let savedToken = savedObject.token 
-    //compare access token
+        //compare access token
     if (token === savedToken) {
-        //when success
-        //1)generating new token
-        let newToken = crypto.randomBytes(5)
-        ///2)save in DB
-           db.IdTokenConnection.set(usrId, {token:Number(newToken)});
-        //3)notify client - access token has been changed!  
-        wsock.send(JSON.stringify({type:"authUpd",data:`${newToken.toString("hex")}${usrId.toString(16)}`}))
-      //---s u c c e s s    a u t h o  r i z a t i o n ---
-        return true
-    }else{
+      //---s u c c e s s !!!---
+        return usrId
+    }else {
       //fail
       return false
     }
 
 }
 
-wss.on('connection',function(sock, req){
-    
+wss.on ('connection',function(sock, req) {
+
+    let usrId = newConnectionTokenCheck(req,db)
+    if (!usrId) {
+      sock.close(4001,'Authentication failed!');
+      return 
+    }
     //  checkUserByWebSocks()
-    current = sock;
-    timer = setInterval(()=>current.send(Date.now().toString()),3000)
+     //1)add custom property with userId o connection object
+    sock.usrId = usrId
+    //2)save connection in Map
+    db.IdConnection.set(usrId,sock);
 
     sock.on("message", function(data){
-         console.log('received: ', data.toString());
+      let msg = JSON.parse(data)
+      //authenticate user
+      let  usrDat  = validateAndUpdateToken(db, msg.auth)
+      if (!usrDat) {
+        sock.close(4001,'Authentication failed!');
+        return 
+      }
+
+      switch (msg.type) {
+        case 'txt':
+    //generate response with data and new access token and timestamp
+          let responseMsg = {type: "txt", auth: usrDat.auth, data: Date.now().toString()}
+          let targetSocket = db.IdConnection.get(tok.usrId)
+          targetSocket.send(JSON.stringify(responseMsg));
+        break;
+        default:
+
+      }
+      
          
     })
+
     sock.on('error', console.error);
 
     sock.on("close",()=>{
-      console.log("Client disconnected")
-      clearInterval(timer);
+       //get id
+       let id = sock.usrId
+       //clean connection
+       db.IdConnection.delete(id);
     })
 })
 
