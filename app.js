@@ -143,7 +143,7 @@ app.post("/login",(req,res)=>{
        //assign new token to cookie
        //---token format:
        //[token(4),userId(4)]
-       res.cookie("auth",`${token.toString('hex')}${usrId.toString(16)}`,{ maxAge: 900000, httpOnly: true })
+       res.cookie("auth",`${token.toString('hex')}${usrId.toString(16)}`,{ maxAge: 900000, httpOnly: false })
        successLogin(res)
        return true
     }
@@ -157,7 +157,7 @@ app.post("/login",(req,res)=>{
 const validateAndUpdateToken = (dBase, auth) =>{
   //extarct authorization data
   let usrId =  parseInt(auth.slice(8), 16);
-  let token = Buffer.from(auth.slice(0,7), 'hex');
+  let token = Buffer.from(auth.slice(0,8), 'hex');
    //get token by usrId
    let savedToken = dBase.IdToken.get(usrId);
    if (!savedToken) {
@@ -230,7 +230,7 @@ wss.on ('connection',function(sock, req) {
     db.IdConnection.set(usrId,sock);
 
     sock.on("message", function(data){
-      let msg = JSON.parse(data)
+      let msg = JSON.parse(data.toString("utf8"))
       //authenticate user
       let  usrDat  = validateAndUpdateToken(db, msg.auth)
       if (!usrDat) {
@@ -242,7 +242,7 @@ wss.on ('connection',function(sock, req) {
         case 'txt':
     //generate response with data and new access token and timestamp
           let responseMsg = {type: "txt", auth: usrDat.auth, data: Date.now().toString()}
-          let targetSocket = db.IdConnection.get(tok.usrId)
+          let targetSocket = db.IdConnection.get(usrDat.usrId)
           targetSocket.send(JSON.stringify(responseMsg));
         break;
         default:

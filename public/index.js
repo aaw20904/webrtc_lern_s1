@@ -9,7 +9,7 @@ window.onload = function(){
          //1) read token
          const auth = Cookies.get('auth');
          //2) message
-         const msg = {auth:auth, type:"txt", data:edit.value}
+         const msg = { type:"txt", data:edit.value, auth:auth}
         exampleSocket.send(JSON.stringify(msg));
     })
     
