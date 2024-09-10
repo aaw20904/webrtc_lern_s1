@@ -14,7 +14,10 @@ window.onload = function(){
     })
     
     exampleSocket.onclose=(event)=>{
-        console.log(`Connection closed with code: ${event.code} and reason: ${event.reason}`);
+        let errNode = document.querySelector(".err_string");
+        errNode.classList.remove("d-none");
+        errNode.innerText = `Connection closed with code: ${event.code} and reason: ${event.reason}`;
+       
     }
 
     exampleSocket.onmessage=(evt)=>{

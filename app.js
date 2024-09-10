@@ -137,14 +137,13 @@ app.post("/login",(req,res)=>{
     //is the password correct?
     if(db.IdPassword.get(usrId) === password){
        //generate token 
-       let token = crypto.randomBytes(5)
-       
+       let token = crypto.randomBytes(4);
        //save token in db
-       db.IdToken.set(usrId,  Number(token));
+       db.IdToken.set(usrId,  token.readUInt32BE());
        //assign new token to cookie
        //---token format:
-       //[token(8),userId(4)]
-       res.cookie("auth",`${token.toString("hex")}${usrId.toString(16)}`,{ maxAge: 900000, httpOnly: true })
+       //[token(4),userId(4)]
+       res.cookie("auth",`${token.toString('hex')}${usrId.toString(16)}`,{ maxAge: 900000, httpOnly: true })
        successLogin(res)
        return true
     }
@@ -157,8 +156,8 @@ app.post("/login",(req,res)=>{
 
 const validateAndUpdateToken = (dBase, auth) =>{
   //extarct authorization data
-  let usrId =  parseInt(auth.slice(10), 16);
-  let token = parseInt(auth.slice(0,9), 16);
+  let usrId =  parseInt(auth.slice(8), 16);
+  let token = Buffer.from(auth.slice(0,7), 'hex');
    //get token by usrId
    let savedToken = dBase.IdToken.get(usrId);
    if (!savedToken) {
@@ -166,13 +165,13 @@ const validateAndUpdateToken = (dBase, auth) =>{
      return false
    }
       //compare access token
-   if (token === savedToken) {
+   if (token.readUint32BE() === savedToken) {
       //generate new token
-      let newToken =   crypto.randomBytes(5)
+      let newToken =   crypto.randomBytes(4)
        ///2)save in DB
-       db.IdToken.set(usrId, Number(newToken));
+       db.IdToken.set(usrId, newToken.readUInt32BE());
        //3)return the new token for client as  string
-       return {auth: `${newToken.toString("hex")}${usrId.toString(16)}`, usrId:usrId}
+       return {auth: `${newToken.toString('hex')}${usrId.toString(16)}`, usrId:usrId}
    } else{
     return false
    }
@@ -192,9 +191,11 @@ const newConnectionTokenCheck=( req, dbase)=>{
       //when cookie is not
       return false
     }
-    let usrId = parseInt(authData.slice(10),16);
-    let token = parseInt(authData.slice(0,9),16);
-    if(!usrId || !token){
+    
+
+    let usrId = parseInt(authData.slice(8),16);
+    let token = Buffer.from(authData.slice(0,8),'hex');
+    if (!usrId || !token) {
       //when cookie hasan`t fields 
       return false
     }
@@ -205,7 +206,7 @@ const newConnectionTokenCheck=( req, dbase)=>{
       return false
     }
         //compare access token
-    if (token === savedToken) {
+    if (token.readUInt32BE() === savedToken) {
       //---s u c c e s s !!!---
         return usrId
     }else {
@@ -251,7 +252,9 @@ wss.on ('connection',function(sock, req) {
          
     })
 
-    sock.on('error', console.error);
+    sock.on('error',(err)=>{ 
+      console.log(err)
+    });
 
     sock.on("close",()=>{
        //get id
