@@ -14,6 +14,7 @@ db.NameId= new Map();
 db.IdPassword = new Map();
 db.IdToken = new Map();
 db.IdConnection = new Map();
+db.IdStatus = new Map(); //ready or busy
 ////user 1
 db.NameId.set("user1", 1000);
 db.IdPassword.set(1000,'secret1');
@@ -21,7 +22,7 @@ db.IdPassword.set(1000,'secret1');
 db.NameId.set("user2", 1001);
 db.IdPassword.set(1001,'secret2');
 ////user 3
-db.NameId.set("user2", 1002);
+db.NameId.set("user3", 1002);
 db.IdPassword.set(1002,'secret2');
 
 
@@ -34,6 +35,7 @@ const app = express();
 const server = https.createServer(options,app);//http server
  
 var wss = new WebSocket.Server({ server });//WS server
+
 
 // Start the server
 server.listen(443, () => {
@@ -153,8 +155,26 @@ app.post("/login",(req,res)=>{
   //res.json(req.body)
 })
 
+const newTokenForUser = async (dBase, usrId) =>{
+  let newToken = await new Promise((resolve, reject) => {
+                  //generate new token
+                    crypto.randomBytes(4, (err, buf)=>{
+                      if(!err){
+                        resolve(buf)
+                      }else{
+                        reject(err)
+                      }
+                  })
+                
+              });
+      ///2)save in DB
+      db.IdToken.set(usrId, newToken.readUInt32BE());
+      //3)return the new token for client as  string
+      return {auth: `${newToken.toString('hex')}${usrId.toString(16)}`, usrId:usrId}
+}
 
-const validateAndUpdateToken = (dBase, auth) =>{
+
+const validateAndUpdateToken = async (dBase, auth) =>{
   //extarct authorization data
   let usrId =  parseInt(auth.slice(8), 16);
   let token = Buffer.from(auth.slice(0,8), 'hex');
@@ -167,7 +187,15 @@ const validateAndUpdateToken = (dBase, auth) =>{
       //compare access token
    if (token.readUint32BE() === savedToken) {
       //generate new token
-      let newToken =   crypto.randomBytes(4)
+      let newToken = await new Promise((resolve, reject) => {
+                            crypto.randomBytes(4,(er, buf)=>{
+                              if (er) {
+                                reject(er)
+                              } else {
+                                resolve(buf)
+                              }
+                            })
+                        });  
        ///2)save in DB
        db.IdToken.set(usrId, newToken.readUInt32BE());
        //3)return the new token for client as  string
@@ -215,6 +243,19 @@ const newConnectionTokenCheck=( req, dbase)=>{
     }
 
 }
+//---------------notyfy all the abonents that the abonent is busy--
+ const notifyAbonents = (msgType, abonentId, idConnStore)=>{
+
+  //iterate
+   idConnStore.forEach((conn, idx)=>{
+      if (abonentId != idx) {
+        //notify all the abonents exclude who is cause
+        const msg = JSON.stringify( {type:msgType, usrId:abonentId});
+        conn.send(msg)
+      }
+   })
+ 
+ }
 
 wss.on ('connection',function(sock, req) {
 
@@ -224,15 +265,15 @@ wss.on ('connection',function(sock, req) {
       return 
     }
     //  checkUserByWebSocks()
-     //1)add custom property with userId o connection object
+     //1)add custom property with userId to the connection object
     sock.usrId = usrId
     //2)save connection in Map
-    db.IdConnection.set(usrId,sock);
+    db.IdConnection.set(usrId, sock);
 
-    sock.on("message", function(data){
+    sock.on("message", async function(data){
       let msg = JSON.parse(data.toString("utf8"))
       //authenticate user
-      let  usrDat  = validateAndUpdateToken(db, msg.auth)
+      let  usrDat  = await validateAndUpdateToken(db, msg.auth)
       if (!usrDat) {
         sock.close(4001,'Authentication failed!');
         return 
@@ -245,8 +286,18 @@ wss.on ('connection',function(sock, req) {
           let targetSocket = db.IdConnection.get(usrDat.usrId)
           targetSocket.send(JSON.stringify(responseMsg));
         break;
+        case "call":
+          //1)initate a connection
+          //is the receiver busy?
+          //re-send to receiver
+          break;
+        case 'confirm_call':
+          //2)when reciever confirmed
+          break;
+        case 'reject_call':
+          //2A)receiver rejecets a connection 
+          break;
         default:
-
       }
       
          
