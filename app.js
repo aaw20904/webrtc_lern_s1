@@ -289,13 +289,17 @@ wss.on ('connection',function(sock, req) {
         case "call":
           //1)initate a connection
           //is the receiver busy?
+          //NO: set busy receiver & caller respond with 'confirm_call' to caller
+          //YES: respond with 'reject_call' to caller
           //re-send to receiver
           break;
         case 'confirm_call':
           //2)when reciever confirmed
+          //set busy receiver & caller respond with 'confirm_call' to caller
           break;
         case 'reject_call':
           //2A)receiver rejecets a connection 
+          // respond with 'reject_call' to caller
           break;
         default:
       }
