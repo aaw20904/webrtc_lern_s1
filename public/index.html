@@ -8,16 +8,23 @@
     <script src="index.js"></script>
     <link rel="stylesheet" href="bootstrap.min.css">
     <link rel="stylesheet" href="index.css">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
     <div class="container">
+      <h2 class="h2 m2 usr_name "></h2>
+      <h3 class="text-danger remote_call_title"></h3>
       <button class="btn btn-dark m-1" id="startBtn" >Send</button>
       <input type="text" class="form-control m-1" id="inputEdit">
       <h2 id="remoteText" class="h2 m-1">***</h2>
 
-      <form class="d-flex flex-column align-items-start justify-content-start border border-secondary">
-        <div class="w-75"><input type="text"  class=" m-2 form-control" id="callerInput"></div> 
-        <h5 class="h5 m-2 receiverOutput">***</h5>
+      <div id="call_spinner" class="d-none spinner-grow" style="width: 3rem; height: 3rem;" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+
+      <article class="d-flex flex-column align-items-start justify-content-start border border-secondary">
+        <div class="w-75"><input type="text"  class=" m-2 form-control" id="terminalInput"></div> 
+        <h5 class="h5 m-2 terminalOutput">***</h5>
      
          <div>
             <select class="form-select" id="abonentSelect" aria-label="Default select example">
@@ -25,19 +32,25 @@
             </select>
          </div> 
          <div>
-            <button id="connect" class="m-2 btn btn-dark">Connect to..</button> 
+            <button id="connect" class="m-2 p-2 btn btn-dark">Connect to..</button> 
          </div> 
           <div>
-            <button id="disconnect" class="m-2 btn btn-dark">Disconnect</button>
+            <button id="disconnect" class="m-2 p-2 btn btn-dark">Disconnect</button>
+          </div>
+          <div>
+            <button id="send_message" class="m-2 p-2 btn btn-secondary" disabled>Send message</button>
           </div>
       
-      </form>
+      </article>
       <h3 class="h3 text-danger m-1 d-none err_string"></h3>
-          <div class="d-none my_spinner text-center position-absolute bottom-50 end-50">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
+       <article class="d-none" id='my_spinner'>
+          <div class="text-center position-absolute bottom-50 end-50">
+               <div class="spinner-border" role="status">
+                   <span class="visually-hidden">Loading...</span>
+               </div>
+           </div>
+       </article>
+       
     </div>
 </body>
 </html>

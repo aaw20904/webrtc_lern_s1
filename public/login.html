@@ -7,6 +7,7 @@
     <title>Document</title>
     <link rel="stylesheet" href="bootstrap.min.css">
     <link rel="stylesheet" href="index.css">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <style>
 
         body{
@@ -20,17 +21,20 @@
     </style>
 </head>
 <body>
+    <script src="login.js"></script>
     <div class="container">
-        
-        <h2>Please enter your name and password:</h2>
-            <form class="d-flex flex-column p-2" action="/login" enctype="application/x-www-form-urlencoded" method="post">
-                    <label class="form-label m-2" for="001">name</label>
-                    <input class="form-control m-2" type="text" name="name" id="001">
-                    <label class="form-label m-2" for="001">password</label>
-                    <input class="form-control m-2" type="password" name="password" id="001">
+        <h2 class="d-none success_title h2 text-success">You are logged in successfully!</h2>
+        <h2 class="d-none fail_title h2 text-danger"></h2>
+        <a class="link_url d-none p-2 button btn-success" href="../../index.html">Go to main page</a>
+        <h2 class="prompt h2 cred_prompt">Please enter your name and password:</h2>
+            <form class="my_form d-flex flex-column p-2" action="/login" enctype="application/x-www-form-urlencoded" method="post">
+                    <label class="form-label m-2" for="name">name</label>
+                    <input class="form-control m-2" type="text" name="name" id="name">
+                    <label class="form-label m-2" for="password">password</label>
+                    <input class="form-control m-2" type="password" name="password" id="password">
                    
 
-                    <div class="m-2"><button type="submit" class="btn btn-dark">LogIn</button></div>
+                    <div class="m-2"><button type="button" class="login_btn btn btn-dark">LogIn</button></div>
             </form>
 
     </div>
