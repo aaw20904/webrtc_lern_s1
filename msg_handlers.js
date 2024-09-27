@@ -37,11 +37,19 @@
       addressat.send(JSON.stringify(msg))
     }
   
- const   onRtcAnswer= (dBase, msg)=>{
+    const   onRtcAnswer= (dBase, msg)=>{
       let addressat = dBase.IdConnection.get(Number(msg.to))
+      if(!addressat){
+        return
+      }
+      addressat.send(JSON.stringify(msg))
+    }
+
+    const onIce = (dBase, msg)=>{
+        let addressat = dBase.IdConnection.get(Number(msg.to))
       addressat.send(JSON.stringify(msg))
     }
   
-  module.exports = {onRtcAnswer, onRtcOffer, onCallConfirm, onCallReject, onCallStart, onTxt}
+  module.exports = {onRtcAnswer, onRtcOffer, onIce, onCallConfirm, onCallReject, onCallStart, onTxt}
   
   

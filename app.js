@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 let tokenLib =  require('./access_tokens') 
 let handlersMsg = require("./msg_handlers")
+let crdMgr = require('./db');
 
 let current, timer;
 
@@ -14,31 +15,20 @@ let current, timer;
 let users ={}
 
 let db = {}
-let savedData = fs.readFileSync("./idtoken.txt",{encoding:"utf-8"});
-db.NameId= new Map();
-db.IdName = new Map();
-db.IdPassword = new Map();
-  if (savedData.length > 1) {
-    let arr = JSON.parse(savedData);
-    db.IdToken = new Map(arr);
-  }else{
-    db.IdToken = new Map();
-  }
+db.sql_db = new crdMgr.credentialMgr();
 
 db.IdConnection = new Map();
 db.IdOnline = new Set() //ready or busy
 ////user 1
-db.IdName.set(1000,"user1");
-db.NameId.set("user1", 1000);
-db.IdPassword.set(1000,'secret1');
+ 
+ 
+ 
 ////user 2
-db.IdName.set(1001,"user2");
-db.NameId.set("user2", 1001);
-db.IdPassword.set(1001,'secret2');
+ 
+ 
 ////user 3
-db.IdName.set(1002,"user3");
-db.NameId.set("user3", 1002);
-db.IdPassword.set(1002,'secret3');
+ 
+ 
 
 
 const options ={
@@ -80,92 +70,35 @@ app.use(express.urlencoded({ extended: true }));
 
 wss.on('error', console.error);
 
-const failLogin =(res)=>{
-  res.status(403)
-  res.set('Content-Type', 'text/html');
-  res.end(`<!DOCTYTE html> 
-  <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Document</title>
-        <link rel="stylesheet" href="bootstrap.min.css">
-        <link rel="stylesheet" href="index.css">
-        <style>
-
-      body{
-        background-color: salmon;
-        color:darkred !important;
-      }
-
-      
-  </style>
-</head>
-  <body>
-  <div class='d-flex h-100 flex-column justify-content-center align-items-center p-2'>
-    <h2>Forbidden!</h2>
-    <h5>Date:${new Date().toLocaleTimeString()}</h5>
-  </div>
-  </body>
-</html>`)
-}
-
-const successLogin = (res)=>{
-  res.status(201)
-  res.set('Content-Type', 'text/html');
-  res.end(`<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Document</title>
-        <link rel="stylesheet" href="bootstrap.min.css">
-        <link rel="stylesheet" href="index.css">
-        <style>
-    
-            body{
-           background-color: aquamarine;
-           color:darkgreen;
-            }
-     
-            
-        </style>
-    </head>
-    <body>
-    <div class='d-flex flex-column justify-content-center align-items-center p-2'>
-    <h2>You are loggges successfully!</h2>
-    <h5>Date:${new Date().toLocaleTimeString()}</h5>
-    <a href="./index.html">to main page</a>
-       </div>
-    </body>
-    </html>`)
-}
-
+ 
 //login user
 app.post("/login",async (req,res)=>{
-  let token = await  tokenLib.loginToken(req, db)
-  if (!token) {
-    res.statusCode = 401;
-    res.json({status:false})
-    return
-  }
-  res.json( {
-    status:true, auth:token
-  })
- /*  if ( await tokenLib.loginToken(req, res, db)) {
-    successLogin(res)
-   } else {
-    failLogin(res);
-   }*/
+  ///---25.09{
+    if (!req.body.name || !req.body.password) {
+      res.statusCode = 401;
+      res.json({status:false})
+      return
+    }
+    ///validate password firstly
+    let result = await db.sql_db.checkUserPassword(req.body.name, req.body.password) 
+    if (!result.status){
+      res.statusCode = 401;
+      res.json({status:false})
+      return
+    }
+    //vhen succes - assign a new token 
+    let newToken = await db.sql_db.usrNewAccessToken(result.usrId)
+    res.json({status:true, auth:newToken});
+
+ 
  
 })
 
 
 
 //---------------notyfy all the abonents that the abonent is online/offline
- const notifyAbonents = (msgType, abonentId, dBase)=>{
-  const name = dBase.IdName.get(abonentId)
+ const notifyAbonents = async (msgType, abonentId, dBase)=>{
+  const name = await dBase.sql_db.getUsrNameById(abonentId);
   //iterate
    dBase.IdConnection.forEach((conn, idx)=>{
       if (abonentId != idx) {
@@ -178,83 +111,94 @@ app.post("/login",async (req,res)=>{
  
  }
 
- const giveExistsClientsToAbonent = (dBase, sock, usrId)=>{
-  dBase.IdOnline.forEach((val,idx)=>{
+ const giveExistsClientsToAbonent = async (dBase, sock, usrId)=>{
+
+  for (const key of dBase.IdOnline) {
+    if (key != usrId) {
+        let name = await dBase.sql_db.getUsrNameById(key);
+        let msg = {type: 'online', name: name, usrId: key }
+        sock.send(JSON.stringify(msg)) 
+    }
+  }
+
+
+ /* dBase.IdOnline.forEach(async (val,idx)=>{
     if(idx != usrId) {
         let name = dBase.IdName.get(idx);
         let msg = {type: 'online', name: name, usrId: idx }
         sock.send(JSON.stringify(msg))
          
     }
-  })
+  })*/
  }
  
 
 
-wss.on ('connection', function(sock, req) {
+wss.on ('connection', async function(sock, req) {
       // Extract query parameters from the request URL
       const url = new URL(req.url, `https://${req.headers.host}`);
       const token = url.searchParams.get('auth');
 
-    let usrId = tokenLib.newConnectionTokenCheck(token,db)
-    if (!usrId) {
+    let chk = await db.sql_db.usrValidateAccessToken(token);
+    if (!chk.usrId) {
       sock.close(4001,'Authentication failed!');
+      
       return 
     }
     //  checkUserByWebSocks()
      //1)add custom property with userId to the connection object
-    sock.usrId = usrId
-    //2)save connection & status in Map
-    db.IdConnection.set(usrId, sock);
-    db.IdOnline.add(usrId);
+    sock.usrId = chk.usrId
+    //2)save connection & status in Map, add existing user to the key-value storage
+    db.IdConnection.set(chk.usrId, sock);
+    db.IdOnline.add(chk.usrId);
     //3)give a name to the user
-    const usrName = db.IdName.get(usrId);
+    const usrName = await db.sql_db.getUsrNameById(chk.usrId);
     sock.send(JSON.stringify({type:'u_name', name:usrName}))
     //4) give to user list of  clients online
-    giveExistsClientsToAbonent(db, sock, usrId);
+    giveExistsClientsToAbonent(db, sock, chk.usrId);
     //5)notifying others that a new abonent in network
-    notifyAbonents('online',usrId, db);
+    notifyAbonents('online',chk.usrId, db);
      
 
     sock.on("message", async function(data) {
       let msg = JSON.parse(data.toString("utf8"))
       //authenticate user
-      let  usrId  =   tokenLib.validateToken(db, msg.auth)
-      if (!usrId) {
+      let chk = await db.sql_db.usrValidateAccessToken(token);
+      if (!chk.usrId) {
         sock.close(4001,'Authentication failed!');
         return 
       }
       switch (msg.type) {
         case 'test':
           console.log(msg);
-          await refreshAccessTokenInClient(db,usrId)
+          await refreshAccessTokenInClient(db,chk.usrId)
           break;
-        case 'txt':
-         handlersMsg.onTxt(db,  usrId)
-         await refreshAccessTokenInClient(db,usrId)
-        break;
         case "call_start":
           handlersMsg.onCallStart(db, msg)
-          await refreshAccessTokenInClient(db,usrId)
+          await refreshAccessTokenInClient(db,chk.usrId)
           break;
         case 'call_confirm':
            handlersMsg.onCallConfirm(db, msg)
-           await refreshAccessTokenInClient(db,usrId)
+           await refreshAccessTokenInClient(db,chk.usrId)
           break;
         case 'call_reject':
            handlersMsg.onCallReject(db, msg)
-           await refreshAccessTokenInClient(db,usrId)
+           await refreshAccessTokenInClient(db,chk.usrId)
           break;
         case 'rtc_offer':
           handlersMsg.onRtcOffer(db, msg)
-          await refreshAccessTokenInClient(db,usrId)
+          await refreshAccessTokenInClient(db,chk.usrId)
           break;
           case 'rtc_answer':
           handlersMsg.onRtcAnswer(db, msg)
-          await refreshAccessTokenInClient(db,usrId)
+          await refreshAccessTokenInClient(db,chk.usrId)
+          break;
+          case 'ice':
+            handlersMsg.onIce(db,msg)
+            await refreshAccessTokenInClient(db,chk.usrId)
           break;
         default:
-          await refreshAccessTokenInClient(db,usrId)
+          await refreshAccessTokenInClient(db,chk.usrId)
       }
       
          
@@ -275,17 +219,12 @@ wss.on ('connection', function(sock, req) {
 
     })
 })
-//***save cookie on disk */
-setInterval(()=>{
-    let idTokenArray = Array.from(db.IdToken);
-    let jsonData =JSON.stringify(idTokenArray)
-    fs.writeFileSync("./idtoken.txt",jsonData);
-}, 2000)
+ 
 
 async function refreshAccessTokenInClient(dBase, usrId){
    //AUTH: response with new token whom sent this message
    let callerSocket = dBase.IdConnection.get(usrId);
-   let newToken = await tokenLib.updateToken(dBase, usrId);
+   let newToken =   await dBase.sql_db.usrNewAccessToken(usrId);
    callerSocket.send(JSON.stringify({type:'token', auth:newToken}))
    //-------auth----------auth---------auth--------auth----------
 }

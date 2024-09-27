@@ -14,8 +14,7 @@
     <div class="container">
       <h2 class="h2 m2 usr_name "></h2>
       <h3 class="text-danger remote_call_title"></h3>
-      <button class="btn btn-dark m-1" id="startBtn" >Send</button>
-      <input type="text" class="form-control m-1" id="inputEdit">
+ 
       <h2 id="remoteText" class="h2 m-1">***</h2>
 
       <div id="call_spinner" class="d-none spinner-grow" style="width: 3rem; height: 3rem;" role="status">
@@ -23,11 +22,16 @@
       </div>
 
       <article class="d-flex flex-column align-items-start justify-content-start border border-secondary">
-        <div class="w-75"><input type="text"  class=" m-2 form-control" id="terminalInput"></div> 
-        <h5 class="h5 m-2 terminalOutput">***</h5>
-     
+        <div class="w-75">
+          <label for="terminalInput" class="d-none form-label" id="remote-text-label">Enter a message for remote user:</label>
+          <textarea class="form-control m-2" id="terminalInput" rows="2" cols="50" disabled placeholder="Enter your text here..."></textarea>
+
+        </div> 
+        <h5 class="h5 m-2" id="terminalOutput">***</h5>
+          
          <div>
-            <select class="form-select" id="abonentSelect" aria-label="Default select example">
+          <label for="abonentSelect" class="form-label mx-1" id="select-label">Select an addressat from list:</label>
+            <select class="form-select m-2" id="abonentSelect" aria-label="Default select example">
 
             </select>
          </div> 
@@ -43,12 +47,17 @@
       
       </article>
       <h3 class="h3 text-danger m-1 d-none err_string"></h3>
+      <a class="d-none btn btn-primary m-1 p-1" id="loginlink" href="../login.html">Go to Log In page</a>
        <article class="d-none" id='my_spinner'>
           <div class="text-center position-absolute bottom-50 end-50">
                <div class="spinner-border" role="status">
                    <span class="visually-hidden">Loading...</span>
                </div>
            </div>
+       </article>
+       <article class="d-flex flex-column justify-content-around" id="dialog">
+        <div class="m-1 p-1 caller-message w-75 align-self-start">Для з'єднання з віддаленним користувачем натисніть 'Connect to'.Щоб підтвердити вхідний запит - 'Connect to'</div>
+        <div class="m-1 p-1 receiver-message w-75 align-self-end text-end">Щоб відхилити вхідний запрос , або розірвати з'єднання -'Disconnect' </div>
        </article>
        
     </div>

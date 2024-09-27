@@ -1,0 +1,12 @@
+.caller-message {
+    color: darkolivegreen !important;
+    border-radius: 1em !important;
+  background-color: antiquewhite !important;
+}
+
+.receiver-message {
+    color: darkolivegreen !important;
+    border-radius: 1em !important;
+    background-color: lime !important;
+  
+}
