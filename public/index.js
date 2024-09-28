@@ -499,7 +499,7 @@ window.onload = function(){
 
          let offer = await cObj.connection.createOffer()
          await cObj.connection.setLocalDescription(offer)
-         return offer;
+         return offer; //
 
     }
 
