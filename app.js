@@ -19,17 +19,7 @@ db.sql_db = new crdMgr.credentialMgr();
 
 db.IdConnection = new Map();
 db.IdOnline = new Set() //ready or busy
-////user 1
  
- 
- 
-////user 2
- 
- 
-////user 3
- 
- 
-
 
 const options ={
       cert: fs.readFileSync('cert.crt'),
