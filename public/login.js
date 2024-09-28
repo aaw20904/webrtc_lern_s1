@@ -27,6 +27,8 @@ window.onload=function(){
                     const currentUrl = new URL(document.location.href)
                     let response = await fetch(`${currentUrl.protocol}//${currentUrl.hostname}/login`, dataToFetch).then(res=>res.json())
                     if (response.status){
+                      //assign token
+                      sessionStorage.setItem('auth',response.auth);
                          successTitle.classList.remove("d-none")
                          failTitle.classList.add("d-none")
                          //assign token
@@ -36,6 +38,7 @@ window.onload=function(){
                          urlLink.classList.remove('d-none');
                           let form = document.querySelector(".my_form")
                           form.classList.add('d-none')
+                          setTimeout(()=>window.location.assign('../index.html'), 1000)
                     } else{
                         successTitle.classList.add("d-none")
                         failTitle.classList.remove("d-none")

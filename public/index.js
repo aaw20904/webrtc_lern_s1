@@ -39,7 +39,7 @@ window.onload = function(){
       };
 
 
-      function isRcConnectionActive(rtc_conn){
+      function isRcConnectionActive(rtc_conn) {
         if(!rtc_conn){
             return false
         }
@@ -61,7 +61,7 @@ window.onload = function(){
             return false
         }
                 //extarct authorization data
-        let usrId =  parseInt(auth.slice(8), 16);
+        let usrId =  parseInt(auth.slice(32),16);
         return usrId | 0
     }
 
@@ -267,11 +267,8 @@ window.onload = function(){
             //new message:
             //1) read token
             const auth = sessionStorage.getItem('auth');
-            const usrId = getUsrId()
-            //2)set call info
-            callInfo = {incoming:false, to:remoteUsrId, from:usrId  } 
             //3) message
-            const msg = { type:"call_start", to: remoteUsrId ,from:usrId,  auth:auth}
+            const msg = { type:"call_start", to: callInfo.to ,from: callInfo.from,  auth:auth}
             //4)set text on screen turn on spinner
             
             remoteText.classList.remove("text-danger");
@@ -335,23 +332,20 @@ window.onload = function(){
             case 'u_name':
                 abonentName = msgObj.name
                 usrNameTitle.innerText = abonentName
+                if (msgObj.auth) {
+                     sessionStorage.setItem('auth',msgObj.auth)
+                }
                 //block clear , unblock call
                 blockClearBtn()
                 releaseCallBtn()
-                break;
-            case "txt":
-                remoteText.innerHTML = msgObj.data;    
-                break;
-     
-            case "token":
-                //assign new value of token that has been received to cookies
-                //Cookies.set('auth', msgObj.auth, { expires: 1, path: '/', secure: true, sameSite: 'Strict' });
-                sessionStorage.setItem('auth',msgObj.auth)
-                break; 
+                break;; 
             case "online":
                 applyAbonentAvaliable(msgObj.usrId, msgObj.name)
                 break
             case 'call_start':
+                if (msgObj.auth) {
+                    sessionStorage.setItem('auth',msgObj.auth)
+               }
                 //has RTC been establised?
                 if ( isRcConnectionActive( abonentConnection.connection)) {
                    JSON.stringify({ type:"call_reject", to:msgObj.from, from:msgObj.to , auth:sessionStorage.getItem('auth')});
@@ -368,6 +362,9 @@ window.onload = function(){
                 releaseClearBtn()
                 break
             case "call_reject":
+                if (msgObj.auth) {
+                    sessionStorage.setItem('auth',msgObj.auth)
+               }
                 lockUsrTextInput()
                 //has a connection been established?
                 if(abonentConnection.connection ){
@@ -389,6 +386,9 @@ window.onload = function(){
                 //3)Do eny actions for disconnecting
                 break;
             case "call_confirm":
+                if (msgObj.auth) {
+                    sessionStorage.setItem('auth',msgObj.auth)
+                }
                 //caler phonning...
                 //clear pervious dialog
                 dialogBox.replaceChildren();
@@ -410,6 +410,9 @@ window.onload = function(){
                 collectionICE = [];
                 break;
             case 'rtc_offer': 
+               if (msgObj.auth) {
+                   sessionStorage.setItem('auth',msgObj.auth)
+                }
                 //offer from a caller
                 console.log('caller =>> receiver (offer)')
                 console.log(msgObj.offer)

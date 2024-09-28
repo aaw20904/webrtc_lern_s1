@@ -8,8 +8,12 @@
        targetSocket.send(JSON.stringify(responseMsg));
     }
   
-    const onCallStart= (dBase, msg)=>{
+    const onCallStart= async (dBase, msg)=>{
          //re-send message to the adressat
+         //A) adressat ID
+         let newToken = await dBase.sql_db.usrNewAccessToken( msg.to );
+         //B)refresh token
+          msg.auth= newToken 
          let whom = dBase.IdConnection.get(Number(msg.to));
          whom.send(JSON.stringify(msg));
          return
@@ -17,7 +21,11 @@
      //NOTE:logical connection
      
   
-    const onCallReject = (dBase, msg)=>{
+    const onCallReject =async (dBase, msg)=>{
+      //A) adressat ID
+      let newToken = await dBase.sql_db.usrNewAccessToken( msg.to );
+      //B)refresh token
+       msg.auth= newToken
            //re-send message to the adressat
            let whom = dBase.IdConnection.get(Number(msg.to));
            whom.send(JSON.stringify(msg));
@@ -25,14 +33,22 @@
     }
    
   //NOTE: logical connection
-   const onCallConfirm= (dBase, msg)=>{
+   const onCallConfirm= async (dBase, msg)=>{
+    //A) adressat ID
+    let newToken = await dBase.sql_db.usrNewAccessToken( msg.to );
+    //B)refresh token
+     msg.auth= newToken
       //re-sending confirmation to the caller
       let caller = dBase.IdConnection.get(Number(msg.to));
       caller.send(JSON.stringify(msg))
   
     }
   
-   const onRtcOffer= (dBase, msg)=>{
+   const onRtcOffer = async (dBase, msg)=>{
+      //A) adressat ID
+      let newToken = await dBase.sql_db.usrNewAccessToken( msg.to );
+      //B)refresh token
+       msg.auth= newToken
       let addressat = dBase.IdConnection.get(Number(msg.to))
       addressat.send(JSON.stringify(msg))
     }

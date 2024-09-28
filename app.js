@@ -89,8 +89,6 @@ app.post("/login",async (req,res)=>{
     //vhen succes - assign a new token 
     let newToken = await db.sql_db.usrNewAccessToken(result.usrId)
     res.json({status:true, auth:newToken});
-
- 
  
 })
 
@@ -137,7 +135,11 @@ app.post("/login",async (req,res)=>{
 wss.on ('connection', async function(sock, req) {
       // Extract query parameters from the request URL
       const url = new URL(req.url, `https://${req.headers.host}`);
-      const token = url.searchParams.get('auth');
+      let token = url.searchParams.get('auth');
+      if (token == 'null') {
+        sock.close(4001,'Authentication failed!');
+        return
+      }
 
     let chk = await db.sql_db.usrValidateAccessToken(token);
     if (!chk.usrId) {
@@ -145,60 +147,54 @@ wss.on ('connection', async function(sock, req) {
       
       return 
     }
-    //  checkUserByWebSocks()
-     //1)add custom property with userId to the connection object
+
+    //1) update token 
+    token = await db.sql_db.usrNewAccessToken(chk.usrId); 
+     //2)add custom property with userId to the connection object
     sock.usrId = chk.usrId
-    //2)save connection & status in Map, add existing user to the key-value storage
+    //3)save connection & status in Map, add existing user to the key-value storage
     db.IdConnection.set(chk.usrId, sock);
     db.IdOnline.add(chk.usrId);
-    //3)give a name to the user
+    //4)give a new token and saved name to the user 
     const usrName = await db.sql_db.getUsrNameById(chk.usrId);
-    sock.send(JSON.stringify({type:'u_name', name:usrName}))
-    //4) give to user list of  clients online
+    sock.send(JSON.stringify({type:'u_name', name:usrName , auth: token}));
+    //5) give to user list of  clients online
     giveExistsClientsToAbonent(db, sock, chk.usrId);
-    //5)notifying others that a new abonent in network
+    //6)notifying others that a new abonent in network
     notifyAbonents('online',chk.usrId, db);
      
 
     sock.on("message", async function(data) {
+      let newToken=null
       let msg = JSON.parse(data.toString("utf8"))
       //authenticate user
-      let chk = await db.sql_db.usrValidateAccessToken(token);
+      let chk = await db.sql_db.usrValidateAccessToken(msg.auth);
       if (!chk.usrId) {
         sock.close(4001,'Authentication failed!');
         return 
       }
       switch (msg.type) {
-        case 'test':
-          console.log(msg);
-          await refreshAccessTokenInClient(db,chk.usrId)
-          break;
+  
         case "call_start":
-          handlersMsg.onCallStart(db, msg)
-          await refreshAccessTokenInClient(db,chk.usrId)
+           await handlersMsg.onCallStart(db, msg)
           break;
         case 'call_confirm':
-           handlersMsg.onCallConfirm(db, msg)
-           await refreshAccessTokenInClient(db,chk.usrId)
-          break;
+         await  handlersMsg.onCallConfirm(db, msg)
+         break;
         case 'call_reject':
-           handlersMsg.onCallReject(db, msg)
-           await refreshAccessTokenInClient(db,chk.usrId)
+          await handlersMsg.onCallReject(db, msg)
           break;
         case 'rtc_offer':
-          handlersMsg.onRtcOffer(db, msg)
-          await refreshAccessTokenInClient(db,chk.usrId)
+          await handlersMsg.onRtcOffer(db, msg)
           break;
-          case 'rtc_answer':
+        case 'rtc_answer':
           handlersMsg.onRtcAnswer(db, msg)
-          await refreshAccessTokenInClient(db,chk.usrId)
           break;
-          case 'ice':
+        case 'ice':
             handlersMsg.onIce(db,msg)
-            await refreshAccessTokenInClient(db,chk.usrId)
           break;
         default:
-          await refreshAccessTokenInClient(db,chk.usrId)
+           
       }
       
          
